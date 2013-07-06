@@ -7,6 +7,7 @@
  */
 
 var grunt = require('grunt');
+var bowerrc = require('bower').config;
 var bowerCommand = require('./bower-command');
 var helpers = require('./helpers');
 
@@ -19,22 +20,26 @@ var helpers = require('./helpers');
  * @return {object} bower's .json configuration object
  */
 var findBowerJSON = function (BI) {
-  var bowerJSON;
+  var bowerJSON = BI.get('.bowerrc').json;
 
-  grunt.util._.each(['bower.json', 'component.json'], function (configFile) {
-    if (!helpers.is(bowerJSON, 'object') && grunt.file.isFile(configFile)) {
-      bowerJSON = grunt.file.readJSON(configFile);
+  grunt.util._.each([bowerJSON, 'component.json'], function (configFile) {
+    if (grunt.file.isFile(configFile)) {
 
-      if (configFile !== 'bower.json') {
+      if (configFile !== bowerJSON) {
         grunt.log.writeln();
         grunt.log.warn(configFile.yellow + ' is deprecated.'.yellow);
         grunt.log.writeln('Your dependencies are going to be managed in "bower.json" going forward. Everything will carry over. :)'.cyan);
         grunt.log.writeln();
       }
+
+      return grunt.file.readJSON(configFile);
     }
   });
 
-  return bowerJSON;
+  return {
+    main: '',
+    dependencies: {}
+  };
 };
 
 
@@ -58,12 +63,12 @@ var bootstrap = function (task, grunt) {
     ('done', done)
     ('warnings', [])
     ('global-dependencies', helpers.createStore())
-    ('.bowerrc', grunt.file.readJSON('.bowerrc'))
-    ('bower.json', findBowerJSON(store))
+    ('.bowerrc', bowerrc)
+    ('bower.json', findBowerJSON(store)) // defaults to "bower.json"
     ('ignore-path', grunt.config.data['bower-install'].ignorePath)
     ('html-file', grunt.config.data['bower-install'].html)
     ('html', grunt.file.read(grunt.config.data['bower-install'].html))
-    ('directory', store.get('.bowerrc').directory || 'bower_components')
+    ('directory', bowerrc.directory) // defaults to "bower_components" unless not specified and "components" exists
 
   return store;
 };
